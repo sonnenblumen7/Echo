@@ -70,14 +70,15 @@ normal → warning → alert
 
 ```python
 # services/watchdog.py
-def reset_watchdog(heartbeat_type: str, latitude=None, longitude=None,
-                   device_id="default"):
+def reset_watchdog() -> None:
+    """只负责 watchdog_state 表。不写 heartbeat_log，不处理坐标。"""
     ...
 ```
 
-- `POST /heartbeat` → `reset_watchdog("physical", lat, lng)`
-- `POST /internal/heartbeat` → `reset_watchdog("emotional")`
-- 未来任何新渠道 → `reset_watchdog(...)`
+- `POST /heartbeat` → 写 `heartbeat_log` → `reset_watchdog()`
+- `POST /internal/heartbeat` → 写 emotional 记录（未来）→ `reset_watchdog()`
+- 未来任何新渠道 → 写对应日志 → `reset_watchdog()`
+- 状态机只关心"发生活动"，不关心活动来源
 - **禁止**直接调用 `UPDATE watchdog_state SET ...`
 
 ### 7. watchdog_state 只能通过 service 层修改

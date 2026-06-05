@@ -19,25 +19,35 @@ Day 9-10  ░░░░░░░░░█  Phase 4: 全链路压测
 
 ### 交付物
 
-| 任务 | 产出 |
-|------|------|
-| SQLite 建库 | WAL 模式，所有表 + 索引一次性创建 |
-| POST /heartbeat | 支持 JSON 数组批量接收，INSERT OR IGNORE 去重 |
-| GET /status | 返回当前状态、最后心跳时间、坐标 |
-| services/watchdog.py | `reset_watchdog()` 统一入口 |
-| watchdog_daemon.py | FastAPI lifespan 启动，30 秒轮询，启动时从 SQLite 恢复状态 |
-| POST /config | 看门狗阈值配置读写 |
-| POST /contacts | 紧急联系人 CRUD |
-| services/alert.py | 告警发送 + SQLite 重试队列 + 指数退避 |
-| services/notification.py | `send_direct_warning()` 占位函数（后续接 Server酱/SMS） |
-| POST /sos | SOS 紧急触发接口 |
+| 任务 | 产出 | 状态 |
+|------|------|------|
+| SQLite 建库 | WAL 模式，所有表 + 索引一次性创建 | ✅ 完成 |
+| POST /heartbeat | 支持 JSON 数组批量接收，INSERT OR IGNORE 去重 | ✅ 完成 |
+| GET /status | 返回当前状态、最后心跳时间、剩余秒数 | ✅ 完成 |
+| services/watchdog.py | `reset_watchdog()` / `get_watchdog_state()` / `get_remaining()` / `get_config()` / `transition_state()` | ✅ 完成 |
+| watchdog_daemon.py | FastAPI lifespan 启动，30 秒轮询，状态迁移 + 防重发 | ✅ 完成 |
+| POST /config | 看门狗阈值配置读写 | ⬜ 待开发 |
+| POST /contacts | 紧急联系人 CRUD | ⬜ 待开发 |
+| services/alert.py | 告警发送 + SQLite 重试队列 + 指数退避 | ⬜ 待开发 |
+| services/notification.py | `send_direct_warning()` 占位函数（后续接 Server酱/SMS） | ⬜ 待开发 |
+| POST /sos | SOS 紧急触发接口 | ⬜ 待开发 |
 
 ### 验收标准
 
-- [ ] 进程崩溃重启后，看门狗从 SQLite 自动恢复状态
+- [x] 进程崩溃重启后，看门狗从 SQLite 自动恢复状态
+- [x] 心跳停止 → daemon 自动迁移 normal → warning → alert
+- [x] 收到心跳 → 状态回退 normal，防重发生效
 - [ ] 模拟心跳停止 45 分钟 → 收到预警
 - [ ] 模拟心跳停止 60 分钟 → 收到告警短信（含坐标 + 高德链接）
 - [ ] 告警发送失败 → 自动重试 → 重试耗尽 → 备用通道
+
+### 已知技术债
+
+| 编号 | 描述 | 计划处理时间 |
+|------|------|-------------|
+| W2 | heartbeat 写入与 watchdog 重置不在同一事务中 | Contacts/Config/Alert 完成后 |
+| W3 | main.py 将随路由增多膨胀，需拆分 routers/ | Phase 1 结束前 |
+| W4 | get_remaining() 与 get_config() 重复查询 | Contacts/Config/Alert 完成后 |
 
 ---
 
@@ -81,7 +91,7 @@ Day 9-10  ░░░░░░░░░█  Phase 4: 全链路压测
 |------|------|
 | AstrBot 部署 | 本地或 GCP 部署 AstrBot 实例 |
 | MiMo-V2.5 接入 | 直接接入 V2.5（跳过旧版，规避 6/30 停服风险） |
-| 回调联通 | AstrBot → POST /internal/heartbeat → reset_watchdog("emotional") |
+| 回调联通 | AstrBot → POST /internal/heartbeat → reset_watchdog() |
 | System Prompt 调优 | 递进式关怀话术，引导自然交互 |
 
 ### 验收标准
@@ -116,9 +126,9 @@ Day 9-10  ░░░░░░░░░█  Phase 4: 全链路压测
 
 ## 里程碑摘要
 
-| 日期 | 里程碑 | 阻塞等级 |
-|------|--------|----------|
-| Day 3 | 后端核心上线，告警链路跑通 | P0 |
-| Day 6 | 小程序提交初审 | P1 |
-| Day 8 | AI 伴侣联通，情感心跳生效 | P2 |
-| Day 10 | 全链路压测通过，系统就绪 | P0 |
+| 日期 | 里程碑 | 阻塞等级 | 状态 |
+|------|--------|----------|------|
+| Day 3 | 后端核心上线，告警链路跑通 | P0 | 🔄 进行中 |
+| Day 6 | 小程序提交初审 | P1 | ⬜ 未开始 |
+| Day 8 | AI 伴侣联通，情感心跳生效 | P2 | ⬜ 未开始 |
+| Day 10 | 全链路压测通过，系统就绪 | P0 | ⬜ 未开始 |
