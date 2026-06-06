@@ -20,13 +20,13 @@ def get_watchdog_state() -> dict:
 
 def get_remaining() -> int:
     """计算距告警触发的剩余秒数。返回 0 表示已超时。"""
+    from services.config import get_config
+    config = get_config()
+
     conn = get_db()
     try:
         state = conn.execute(
             "SELECT last_heartbeat_ts FROM watchdog_state WHERE id = 1"
-        ).fetchone()
-        threshold = conn.execute(
-            "SELECT value FROM watchdog_config WHERE key = 'alert_threshold'"
         ).fetchone()
     finally:
         conn.close()
@@ -34,7 +34,7 @@ def get_remaining() -> int:
     if not state or not state["last_heartbeat_ts"]:
         return 0
 
-    alert_threshold = int(threshold["value"]) if threshold else 3600
+    alert_threshold = config.get("alert_threshold", 3600)
     elapsed = int(time.time()) - state["last_heartbeat_ts"]
     return max(0, alert_threshold - elapsed)
 
@@ -58,12 +58,16 @@ def reset_watchdog() -> None:
         conn.close()
 
 
-def get_config() -> dict:
-    """读取 watchdog_config 全部配置，返回 dict。"""
+def get_last_location() -> dict:
+    """获取最后一条 physical 心跳的坐标。"""
     conn = get_db()
     try:
-        rows = conn.execute("SELECT key, value FROM watchdog_config").fetchall()
-        return {row["key"]: int(row["value"]) for row in rows}
+        row = conn.execute(
+            "SELECT latitude, longitude, client_ts "
+            "FROM heartbeat_log WHERE type = 'physical' "
+            "ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        return dict(row) if row else {}
     finally:
         conn.close()
 

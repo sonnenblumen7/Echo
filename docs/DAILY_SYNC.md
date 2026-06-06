@@ -12,33 +12,41 @@
 
 ---
 
-## 当前进度：Phase 1 进行中（Day 1-3）
+## 当前进度：Phase 1 完成，Phase 2 待启动
 
-### 已完成
+### Phase 1 已完成（43/43 测试通过）
 
 | 模块 | 文件 | 状态 |
 |------|------|------|
-| SQLite 初始化 | backend/models/database.py | ✅ |
-| watchdog service | backend/services/watchdog.py | ✅ |
-| POST /heartbeat | backend/main.py | ✅ |
-| GET /status | backend/main.py | ✅ |
-| watchdog daemon | backend/daemon/watchdog_daemon.py | ✅ |
-| 架构审查 + C1 修复 | — | ✅ |
-| 文档生成 | docs/*.md + AGENTS.md | ✅ |
+| SQLite 初始化 | models/database.py | ✅ |
+| watchdog service | services/watchdog.py | ✅ |
+| config service | services/config.py | ✅ |
+| contacts service | services/contacts.py | ✅ |
+| alert service | services/alert.py | ✅ |
+| notification 占位 | services/notification.py | ✅ |
+| POST /heartbeat（批量+去重） | routers/heartbeat.py | ✅ |
+| GET /status | routers/status.py | ✅ |
+| POST /config | routers/config.py | ✅ |
+| POST/GET/DELETE /contacts | routers/contacts.py | ✅ |
+| POST /sos（紧急阻断） | routers/sos.py | ✅ |
+| watchdog_daemon | daemon/watchdog_daemon.py | ✅ |
+| main.py（瘦入口 39 行） | main.py | ✅ |
+| Phase 1 Review | docs/PHASE1_REVIEW.md | ✅ |
 
-### 待开发（按优先级）
+### Phase 2 待开发（Day 4-6）
 
-1. POST /config — 看门狗阈值配置读写
-2. POST /contacts — 紧急联系人 CRUD
-3. services/alert.py — 告警发送 + SQLite 重试队列
-4. services/notification.py — send_direct_warning() 占位
-5. POST /sos — SOS 紧急触发
+1. 微信小程序 AppID 注册
+2. 极简 UI（开启/结束守护 + 状态栏）
+3. 前台定位采集 + 离线缓存
+4. SOS 长按按钮
+5. 紧急联系人设置页
+6. **Day 6 强制提审**
 
-### 已知技术债
+### P1 技术债（Phase 2 期间同步处理）
 
-- W2: heartbeat 写入与 watchdog 重置不在同一事务
-- W3: main.py 需在路由增多后拆分 routers/
-- W4: get_remaining() 与 get_config() 重复查询
+- send_sms_alert() 是 mock，需接入真实 SMS API
+- send_direct_warning() 是占位，warning 阶段无实际触达
+- 无备用通知通道（邮件/Webhook）
 
 ---
 
@@ -46,27 +54,40 @@
 
 - watchdog_state 只能通过 services/watchdog.py 修改
 - 所有心跳必须经过 reset_watchdog()
+- trigger_alert 必须传 source（SOS_BUTTON / WATCHDOG_TIMEOUT）
+- POST /sos 必须调用 transition_state("alert")，防状态脑裂
 - SQLite WAL 模式，heartbeat_log 永久保留
 - 预警由 FastAPI 直推，不经过 AstrBot
-- 防重发：last_state_change_ts，同状态不重复触发
 
 ---
 
+## 项目结构
+
+```
+backend/
+├── main.py (39行，瘦入口)
+├── config.py
+├── models/database.py
+├── routers/ (heartbeat, status, config, contacts, sos)
+├── services/ (watchdog, config, contacts, alert, notification)
+├── daemon/watchdog_daemon.py
+```
+
 ## 技术栈
 
-- FastAPI + SQLite (WAL) + 微信小程序 + AstrBot + MiMo-V2.5 + GCP
+FastAPI + SQLite (WAL) + 微信小程序 + AstrBot + MiMo-V2.5 + GCP
 
 ## Git 状态
 
 ```
+(待提交) Phase 1 全部完成
+12d99a7 feat: Phase 1 core
 f64b2c3 docs: add PROJECT, ROADMAP, ARCHITECTURE, and AGENTS constraints
 82234c8 init: FastAPI health check endpoint
 ```
-
-工作目录有未提交变更（Phase 1 代码），待提交。
 
 ---
 
 ## 下次会话第一件事
 
-阅读此文件 → 检查 git status → 继续 Phase 1 待开发任务。
+阅读此文件 → git status → 开始 Phase 2 小程序开发。

@@ -2,7 +2,10 @@ import asyncio
 import logging
 import time
 
-from services.watchdog import get_watchdog_state, get_config, transition_state
+from services.watchdog import get_watchdog_state, get_last_location, transition_state
+from services.config import get_config
+from services.alert import trigger_alert, process_alert_queue
+from services.notification import send_direct_warning
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,9 @@ def _check_once() -> None:
     state = get_watchdog_state()
     config = get_config()
 
+    # 每轮处理告警重试队列
+    process_alert_queue()
+
     if not state.get("last_heartbeat_ts"):
         return
 
@@ -34,9 +40,25 @@ def _check_once() -> None:
     if elapsed >= alert_threshold and current != "alert":
         logger.warning("状态迁移: %s → alert (已 %d 秒无心跳)", current, elapsed)
         transition_state("alert")
+        _on_alert()
 
     elif elapsed >= warning_threshold and current == "normal":
         logger.info("状态迁移: normal → warning (已 %d 秒无心跳)", elapsed)
         transition_state("warning")
+        _on_warning()
 
     # warning → warning / alert → alert: 不重复触发
+
+
+def _on_warning() -> None:
+    """预警触发：占位日志，不发送实际通知。"""
+    send_direct_warning("owner", "检测到您已长时间未更新状态，请问是否安全？")
+
+
+def _on_alert() -> None:
+    """告警触发：获取最后坐标，通知所有紧急联系人。"""
+    loc = get_last_location()
+    lat = loc.get("latitude", 0.0)
+    lng = loc.get("longitude", 0.0)
+    ts = loc.get("client_ts", int(time.time()))
+    trigger_alert(lat, lng, ts, source="WATCHDOG_TIMEOUT")

@@ -26,11 +26,13 @@ Day 9-10  ░░░░░░░░░█  Phase 4: 全链路压测
 | GET /status | 返回当前状态、最后心跳时间、剩余秒数 | ✅ 完成 |
 | services/watchdog.py | `reset_watchdog()` / `get_watchdog_state()` / `get_remaining()` / `get_config()` / `transition_state()` | ✅ 完成 |
 | watchdog_daemon.py | FastAPI lifespan 启动，30 秒轮询，状态迁移 + 防重发 | ✅ 完成 |
-| POST /config | 看门狗阈值配置读写 | ⬜ 待开发 |
-| POST /contacts | 紧急联系人 CRUD | ⬜ 待开发 |
-| services/alert.py | 告警发送 + SQLite 重试队列 + 指数退避 | ⬜ 待开发 |
-| services/notification.py | `send_direct_warning()` 占位函数（后续接 Server酱/SMS） | ⬜ 待开发 |
-| POST /sos | SOS 紧急触发接口 | ⬜ 待开发 |
+| POST /config | 看门狗阈值配置读写 | ✅ 完成 |
+| POST /contacts | 紧急联系人 CRUD（含手机号查重） | ✅ 完成 |
+| services/alert.py | 告警发送 + SQLite 重试队列 + source 区分 | ✅ 完成 |
+| services/notification.py | send_sms_alert(MOCK) + send_direct_warning 占位 | ✅ 完成 |
+| POST /sos | SOS 紧急阻断（写铁证 + transition_state + trigger_alert） | ✅ 完成 |
+| main.py 拆分 | routers/ 模块化（heartbeat/status/config/contacts/sos） | ✅ 完成 |
+| Phase 1 Review | docs/PHASE1_REVIEW.md | ✅ 完成 |
 
 ### 验收标准
 
@@ -128,7 +130,7 @@ Day 9-10  ░░░░░░░░░█  Phase 4: 全链路压测
 
 | 日期 | 里程碑 | 阻塞等级 | 状态 |
 |------|--------|----------|------|
-| Day 3 | 后端核心上线，告警链路跑通 | P0 | 🔄 进行中 |
+| Day 3 | 后端核心上线，告警链路跑通 | P0 | ✅ 完成 |
 | Day 6 | 小程序提交初审 | P1 | ⬜ 未开始 |
 | Day 8 | AI 伴侣联通，情感心跳生效 | P2 | ⬜ 未开始 |
 | Day 10 | 全链路压测通过，系统就绪 | P0 | ⬜ 未开始 |
