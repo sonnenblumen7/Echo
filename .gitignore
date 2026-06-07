@@ -26,3 +26,6 @@ Thumbs.db
 *.db
 *.db-wal
 *.db-shm
+
+# WeChat DevTools
+miniprogram/project.private.config.json

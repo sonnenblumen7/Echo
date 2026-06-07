@@ -1,0 +1,3 @@
+<view>
+  <button bindtap="startProtection">开启守护</button>
+</view>

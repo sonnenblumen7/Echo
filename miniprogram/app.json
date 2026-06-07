@@ -1,0 +1,11 @@
+{
+  "pages": [
+    "pages/index/index"
+  ],
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
+  "permission": {
+    "desc": "用于获取坐标发送防失联心跳"
+  }
+}
