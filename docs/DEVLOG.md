@@ -124,3 +124,108 @@ Phase 1 全回归测试：43 passed, 0 failed
 
 - Phase 2：小程序采集端（Day 4-6）
 - P1 技术债剩余：SMS 接入、备用通知通道、send_direct_warning 占位替换
+
+---
+
+## 2026-06-06（Phase 2 Day 1 — 小程序骨架 + 真机心跳）
+
+### 小程序初始化
+
+**新建文件：**
+- `miniprogram/app.json` — 页面注册 + requiredPrivateInfos: ["getLocation"] + permission.scope.userLocation
+- `miniprogram/app.js` — App 入口，onLaunch 打日志
+- `miniprogram/app.wxss` — 全局样式（空）
+- `miniprogram/project.config.json` — 微信开发者工具项目配置（含 appid: wx54d417ad7c0f6f6e）
+- `miniprogram/pages/index/index.wxml` — 页面结构
+- `miniprogram/pages/index/index.js` — 页面逻辑
+- `miniprogram/pages/index/index.json` — 页面配置
+- `miniprogram/pages/index/index.wxss` — 页面样式
+
+**踩坑记录：**
+1. app.json 的 permission 格式错误：最初写成 `{"desc": "..."}`，正确格式是 `{"scope.userLocation": {"desc": "..."}}`，导致真机定位静默失败
+2. 微信开发者工具需要「清缓存 → 全部清除 → 编译」才能加载新代码，直接点编译可能跑旧缓存
+3. checkPrivacy / recoverTuoguanOptimizeAd 是微信框架内部噪音，不影响功能
+4. bindlongtap 在微信中约 350ms 就触发，不是 3 秒——SOS 进度条改用 touchstart + setTimeout 3 秒手动计时
+
+### 真机心跳验证
+
+- 真机扫码后点击「开启守护」→ 弹出定位授权 → 获取成功（纬度 22.59589）
+- POST /heartbeat → 后端返回 `{status: "ok", received: 1}`
+- 后端终端打印：`heartbeat: 1 条, lat=22.59589, lng=113.97412`
+
+### 60 秒自动心跳
+
+- setInterval 60 秒 → wx.getLocation → push 到队列 → POST /heartbeat
+- 每 60 秒控制台输出：`tick: 位置获取成功，队列 1 条` → `flushQueue 成功: 1 条已送达`
+- 倒计时 60→0 每秒递减，归零后下一个 tick 重置
+
+### 离线缓存 + 批量补发
+
+**测试方法**：停掉后端服务（模拟信号盲区），等心跳积压，再重启后端。
+
+**测试结果**：
+- 断网期间：每 60 秒 `flushQueue 失败: 网络异常，心跳保留在本地队列 (N 条)`
+- 队列正确累积：1→2→3→...→12 条
+- 恢复网络后：`flushQueue 成功: 12 条已送达` → `队列已清空`
+- 恢复正常单条发送
+
+**Gemini 的飞行模式测试方案不可行**：开飞行模式时小程序被系统挂起，setInterval 停止运行。停后端服务是更好的模拟方式。
+
+### UI 重设计
+
+**页面结构**：
+- 状态卡片：守护状态（绿/灰）、最后心跳时间、下次心跳倒计时
+- 开启/结束守护按钮（渐变色，toggle 切换）
+- 手动确认心跳按钮（绿色描边，守护中显示，点击立即发心跳+重置倒计时）
+- SOS 红色圆润按钮（长按 3 秒进度条动画）
+
+**样式**：圆角卡片(24rpx)、渐变按钮、阴影、禁用页面滚动，适配微信审核要求
+
+### SOS 进度条实现
+
+**初版问题**：使用 bindlongtap，但微信的 longtap 约 350ms 就触发，和 3 秒动画不同步。
+
+**修正方案**：去掉 bindlongtap，改为纯手动计时：
+- bindtouchstart → sosPressing=true（CSS 动画开始）+ setTimeout 3 秒
+- 3 秒到 → _fireSos() 触发
+- bindtouchend/bindtouchcancel → clearTimeout + sosPressing=false（动画归零）
+
+**防抖**：15 秒冷却期，_sosCooldown 时间戳判断，重复触发直接忽略。
+
+### 手动确认心跳
+
+- 用户进信号盲区前主动按一下，多争取 60 秒窗口
+- 点击 → 调用 tick() → 立即获取 GPS + 发心跳 + 倒计时重置为 60
+- 只在「守护中」状态显示
+
+### 后端日志补全
+
+- routers/heartbeat.py 新增成功日志：`heartbeat: N 条, lat=X, lng=Y, device=Z`
+- 之前只有 SOS 有坐标日志，普通心跳没有，导致终端看不到数据
+
+### Git 提交记录
+
+```
+f36c6a2 docs: update DAILY_SYNC with Phase 2 progress
+2ea3126 feat: mini program UI, SOS progress bar, manual heartbeat, backend logging
+0da2205 fix: miniprogram entry files and location permission format
+50f1670 feat: phase2 day1 mini program heartbeat prototype
+09a7dbb feat: Phase 1 complete — config, contacts, alert queue, SOS, routers split
+12d99a7 feat: Phase 1 core — SQLite, watchdog service, heartbeat API, daemon, docs
+f64b2c3 docs: add PROJECT, ROADMAP, ARCHITECTURE, and AGENTS constraints
+82234c8 init: FastAPI health check endpoint
+```
+
+### 已知问题
+
+- 真机测试需手机与电脑同局域网（192.168.1.21:8000），后续需部署 GCP 或用 ngrok
+- 开发者工具缓存旧代码问题：清缓存 → 全部清除 → 编译
+- uvicorn 终端偶尔不显示请求日志（可能是 --reload 导致的短暂断连）
+
+### 下一步
+
+1. 设置页——紧急联系人 CRUD（对接 /contacts 接口）
+2. 首次开启守护前强制填写联系人
+3. 底部 Tab 导航（首页 + 设置）
+4. 接入真实 SMS API（替换 mock）
+5. Day 6 强制提审
