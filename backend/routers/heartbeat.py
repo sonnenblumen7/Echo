@@ -51,4 +51,7 @@ async def heartbeat(items: List[HeartbeatItem]):
         logger.error("reset_watchdog 失败: %s", e)
         return {"status": "error", "msg": "watchdog reset failed"}
 
+    last = items[-1]
+    logger.info("heartbeat: %d 条, lat=%.5f, lng=%.5f, device=%s",
+                len(items), last.latitude, last.longitude, last.device_id)
     return {"status": "ok", "received": len(items), "msg": "heartbeat processed"}

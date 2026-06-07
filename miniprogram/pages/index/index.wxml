@@ -1,3 +1,54 @@
-<view>
-  <button bindtap="startProtection">开启守护</button>
+<view class="container">
+  <!-- 标题 -->
+  <view class="header">
+    <text class="title">Echo</text>
+    <text class="subtitle">防失联看门狗</text>
+  </view>
+
+  <!-- 状态卡片 -->
+  <view class="card">
+    <view class="status-row">
+      <text class="label">守护状态</text>
+      <text class="value {{protecting ? 'active' : 'inactive'}}">
+        {{protecting ? '守护中' : '未开启'}}
+      </text>
+    </view>
+    <view class="status-row">
+      <text class="label">最后心跳</text>
+      <text class="value">{{lastHeartbeat}}</text>
+    </view>
+    <view class="status-row" wx:if="{{protecting}}">
+      <text class="label">下次心跳</text>
+      <text class="value">{{countdown}} 秒</text>
+    </view>
+  </view>
+
+  <!-- 开启/结束按钮 -->
+  <button
+    class="btn-main {{protecting ? 'btn-stop' : 'btn-start'}}"
+    bindtap="toggleProtection"
+  >
+    {{protecting ? '结束守护' : '开启守护'}}
+  </button>
+
+  <!-- 手动心跳 -->
+  <button
+    class="btn-ping"
+    wx:if="{{protecting}}"
+    bindtap="manualPing"
+  >
+    💓 手动确认心跳
+  </button>
+
+  <!-- SOS 按钮 -->
+  <view class="sos-wrapper">
+    <button class="btn-sos" bindtouchstart="onSosTouch" bindtouchend="onSosRelease" bindtouchcancel="onSosRelease">
+      <view class="sos-progress {{sosPressing ? 'sos-progress-active' : ''}}"></view>
+      <view class="sos-content">
+        <text class="sos-icon">🚨</text>
+        <text class="sos-text">SOS 紧急求救</text>
+        <text class="sos-hint">长按 3 秒触发</text>
+      </view>
+    </button>
+  </view>
 </view>
