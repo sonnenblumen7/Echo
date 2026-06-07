@@ -12,66 +12,39 @@
 
 ---
 
-## 当前进度：Phase 1 完成，Phase 2 待启动
+## 当前进度：Phase 2 进行中
 
 ### Phase 1 已完成（43/43 测试通过）
 
-| 模块 | 文件 | 状态 |
-|------|------|------|
-| SQLite 初始化 | models/database.py | ✅ |
-| watchdog service | services/watchdog.py | ✅ |
-| config service | services/config.py | ✅ |
-| contacts service | services/contacts.py | ✅ |
-| alert service | services/alert.py | ✅ |
-| notification 占位 | services/notification.py | ✅ |
-| POST /heartbeat（批量+去重） | routers/heartbeat.py | ✅ |
-| GET /status | routers/status.py | ✅ |
-| POST /config | routers/config.py | ✅ |
-| POST/GET/DELETE /contacts | routers/contacts.py | ✅ |
-| POST /sos（紧急阻断） | routers/sos.py | ✅ |
-| watchdog_daemon | daemon/watchdog_daemon.py | ✅ |
-| main.py（瘦入口 39 行） | main.py | ✅ |
-| Phase 1 Review | docs/PHASE1_REVIEW.md | ✅ |
+后端全部就绪：SQLite + watchdog service + daemon + /heartbeat + /status + /config + /contacts + /sos + alert queue + routers 拆分。
 
-### Phase 2 待开发（Day 4-6）
+### Phase 2 已完成
 
-1. 微信小程序 AppID 注册
-2. 极简 UI（开启/结束守护 + 状态栏）
-3. 前台定位采集 + 离线缓存
-4. SOS 长按按钮
-5. 紧急联系人设置页
-6. **Day 6 强制提审**
+| 功能 | 状态 |
+|------|------|
+| wx.getLocation → POST /heartbeat（真机通过） | ✅ |
+| 60 秒自动心跳 + 倒计时显示 | ✅ |
+| 离线缓存 + 批量补发（12 条积压验证通过） | ✅ |
+| UI 重设计（圆角卡片、渐变按钮、状态栏） | ✅ |
+| SOS 长按 3 秒进度条 + 15 秒冷却 | ✅ |
+| 手动确认心跳按钮 | ✅ |
+| 后端 heartbeat 日志输出坐标 | ✅ |
 
-### P1 技术债（Phase 2 期间同步处理）
+### Phase 2 待开发
 
-- send_sms_alert() 是 mock，需接入真实 SMS API
-- send_direct_warning() 是占位，warning 阶段无实际触达
-- 无备用通知通道（邮件/Webhook）
+1. 设置页——紧急联系人 CRUD（对接 /contacts 接口）
+2. 首次开启守护前强制填写联系人
+3. 底部 Tab 导航（首页 + 设置）
+4. 接入真实 SMS API（替换 mock）
+5. Day 6 强制提审
+
+### 已知问题
+
+- 开发者工具偶尔缓存旧代码，需手动清缓存重新编译
+- 真机测试需手机与电脑同局域网（后续部署 GCP 或用 ngrok）
+- checkPrivacy 警告是微信框架噪音，不影响功能
 
 ---
-
-## 架构关键约束（详见 AGENTS.md + ARCHITECTURE.md）
-
-- watchdog_state 只能通过 services/watchdog.py 修改
-- 所有心跳必须经过 reset_watchdog()
-- trigger_alert 必须传 source（SOS_BUTTON / WATCHDOG_TIMEOUT）
-- POST /sos 必须调用 transition_state("alert")，防状态脑裂
-- SQLite WAL 模式，heartbeat_log 永久保留
-- 预警由 FastAPI 直推，不经过 AstrBot
-
----
-
-## 项目结构
-
-```
-backend/
-├── main.py (39行，瘦入口)
-├── config.py
-├── models/database.py
-├── routers/ (heartbeat, status, config, contacts, sos)
-├── services/ (watchdog, config, contacts, alert, notification)
-├── daemon/watchdog_daemon.py
-```
 
 ## 技术栈
 
@@ -80,14 +53,19 @@ FastAPI + SQLite (WAL) + 微信小程序 + AstrBot + MiMo-V2.5 + GCP
 ## Git 状态
 
 ```
-(待提交) Phase 1 全部完成
-12d99a7 feat: Phase 1 core
+2ea3126 feat: mini program UI, SOS progress bar, manual heartbeat, backend logging
+0da2205 fix: miniprogram entry files and location permission format
+50f1670 feat: phase2 day1 mini program heartbeat prototype
+09a7dbb feat: Phase 1 complete — config, contacts, alert queue, SOS, routers split
+12d99a7 feat: Phase 1 core — SQLite, watchdog service, heartbeat API, daemon, docs
 f64b2c3 docs: add PROJECT, ROADMAP, ARCHITECTURE, and AGENTS constraints
 82234c8 init: FastAPI health check endpoint
 ```
+
+工作区干净。
 
 ---
 
 ## 下次会话第一件事
 
-阅读此文件 → git status → 开始 Phase 2 小程序开发。
+阅读此文件 → git status → 继续 Phase 2 设置页开发。
