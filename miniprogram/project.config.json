@@ -21,5 +21,10 @@
     "include": []
   },
   "appid": "wx54d417ad7c0f6f6e",
-  "editorSetting": {}
+  "editorSetting": {},
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于获取坐标发送防失联心跳"
+    }
+  }
 }
