@@ -229,3 +229,73 @@ f64b2c3 docs: add PROJECT, ROADMAP, ARCHITECTURE, and AGENTS constraints
 3. 底部 Tab 导航（首页 + 设置）
 4. 接入真实 SMS API（替换 mock）
 5. Day 6 强制提审
+
+---
+
+## 2026-06-07（Phase 2 Day 2 — TabBar + 设置页 + 安全整改）
+
+### TabBar 导航
+
+- 原生 tabBar，两个 tab：「守护」（首页）+「设置」
+- 自动生成 81x81 PNG 图标（灰色常态 + 绿色选中）
+- app.json 新增 tabBar 配置 + settings 页面注册
+
+### 设置页（pages/settings/）
+
+**功能**：
+- 联系人列表：GET /contacts → 展示手机号 + 姓名 + 删除按钮
+- 添加联系人：手机号（必填，正则校验）+ 姓名（可选）→ POST /contacts
+- 删除联系人：确认弹窗 → DELETE /contacts/{id}
+- 守护中保护：守护状态下禁止删除最后一位联系人（防告警链路断裂）
+- onShow 自动刷新列表（从首页切回设置页时同步最新数据）
+
+**状态传递**：wx.setStorageSync('protecting', bool)，首页开启/结束时写入，设置页删除时读取
+
+### 首页强制校验
+
+- 点击「开启守护」→ GET /contacts → 无联系人 → 弹窗"请先配置紧急联系人" → wx.switchTab 跳转设置页
+- 有联系人 → _doStart() 执行原有心跳逻辑
+- 校验逻辑抽取为独立函数，不污染原有 startProtection 流程
+
+### PushDeer Key 安全整改
+
+- 安装 python-dotenv
+- config.py 新增 load_dotenv()，自动读取项目根目录 `.env` 文件
+- services/push.py 删除硬编码 key，从 config 导入 PUSHDEER_KEY
+- 无 key 时静默跳过（不报错）
+- .env.example 存在占位模板，不含真实 key
+- 已完成 key 轮换：旧 key 废弃，新 key 存入 .env（gitignored）
+
+### BASE_URL 集中管理
+
+- 新建 miniprogram/config.js，导出 BASE_URL
+- index.js 和 settings.js 改为 require('../../config') 引用
+- 换 IP 只需改 config.js 一处
+
+### 踩坑
+
+- 局域网 IP 会变（DHCP 租期），从 192.168.1.21 变为 192.168.1.18
+- 微信小程序不支持 ES module（import/export），必须用 CommonJS（require/module.exports）
+
+### 回归测试
+
+26 passed, 0 failed
+
+覆盖：基础设施(2) + 心跳(3) + 配置(3) + 联系人(7) + 状态机(3) + 告警链路(3) + SOS(3) + PushDeer(1) + 恢复(1)
+
+### Git 提交
+
+```
+6807387 feat: settings page, tab navigation, contact validation, dotenv, centralized config
+c2280fc security: move PushDeer key to environment variable
+9eb3eac feat: PushDeer backup alert channel integration
+f3efd1f docs: fix sync date to 0607
+64d7f15 docs: Phase 2 Day 1 sync brief for AI supervisors
+482fc9c docs: detailed Phase 2 Day 1 devlog for AI supervisor sync
+```
+
+### 下一步
+
+1. 接入真实 SMS API（替换 mock）— 腾讯云 SMS
+2. 注册真实小程序 appid（Day 5 前）
+3. Day 6 强制提审
