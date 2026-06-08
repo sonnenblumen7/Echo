@@ -7,3 +7,6 @@ DB_PATH = os.path.join(BASE_DIR, "echo.db")
 # 看门狗默认阈值（秒）
 DEFAULT_WARNING_THRESHOLD = 2700   # 45 分钟
 DEFAULT_ALERT_THRESHOLD = 3600     # 60 分钟
+
+# PushDeer 保底通知通道
+PUSHDEER_KEY = os.getenv("PUSHDEER_KEY", "")
