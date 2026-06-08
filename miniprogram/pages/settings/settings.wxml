@@ -1,0 +1,38 @@
+<view class="container">
+  <view class="section-title">紧急联系人</view>
+
+  <!-- 联系人列表 -->
+  <view class="contact-list" wx:if="{{contacts.length > 0}}">
+    <view class="contact-item" wx:for="{{contacts}}" wx:key="id">
+      <view class="contact-info">
+        <text class="contact-phone">📱 {{item.phone}}</text>
+        <text class="contact-name" wx:if="{{item.name}}">{{item.name}}</text>
+      </view>
+      <text class="contact-delete" bindtap="deleteContact" data-id="{{item.id}}">✕</text>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{contacts.length === 0}}">
+    <text>暂无紧急联系人</text>
+  </view>
+
+  <!-- 添加联系人表单 -->
+  <view class="form">
+    <view class="form-title">添加联系人</view>
+    <input
+      class="input"
+      placeholder="手机号（必填）"
+      type="number"
+      maxlength="11"
+      value="{{phone}}"
+      bindinput="onPhoneInput"
+    />
+    <input
+      class="input"
+      placeholder="姓名（可选）"
+      value="{{name}}"
+      bindinput="onNameInput"
+    />
+    <button class="btn-save" bindtap="saveContact">保存并测试</button>
+  </view>
+</view>

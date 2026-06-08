@@ -1,7 +1,8 @@
 var timer = null
 var countdownTimer = null
 var deviceId = 'test_device_01'
-var BASE_URL = 'http://192.168.1.21:8000'
+var config = require('../../config')
+var BASE_URL = config.BASE_URL
 
 function getQueue() {
   return wx.getStorageSync('heartbeat_queue') || []
@@ -105,8 +106,36 @@ Page({
     if (timer) return
     var ctx = this
 
+    wx.request({
+      url: BASE_URL + '/contacts',
+      method: 'GET',
+      success: function (r) {
+        if (r.data && r.data.contacts && r.data.contacts.length > 0) {
+          ctx._doStart()
+        } else {
+          wx.showModal({
+            title: '提示',
+            content: '请先配置紧急联系人',
+            showCancel: false,
+            success: function () {
+              wx.switchTab({ url: '/pages/settings/settings' })
+            }
+          })
+        }
+      },
+      fail: function () {
+        wx.showToast({ title: '网络异常', icon: 'error' })
+      }
+    })
+  },
+
+  _doStart: function () {
+    if (timer) return
+    var ctx = this
+
     console.log('startProtection: 开启守护')
     saveQueue([])
+    wx.setStorageSync('protecting', true)
     ctx.setData({ protecting: true, countdown: 60 })
     tick(ctx)
 
@@ -130,6 +159,7 @@ Page({
     clearInterval(countdownTimer)
     countdownTimer = null
     console.log('stopProtection: 守护已停止')
+    wx.setStorageSync('protecting', false)
     this.setData({ protecting: false, countdown: 60 })
   },
 

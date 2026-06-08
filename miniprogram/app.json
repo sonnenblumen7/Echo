@@ -1,6 +1,7 @@
 {
   "pages": [
-    "pages/index/index"
+    "pages/index/index",
+    "pages/settings/settings"
   ],
   "requiredPrivateInfos": [
     "getLocation"
@@ -9,5 +10,25 @@
     "scope.userLocation": {
       "desc": "用于获取坐标发送防失联心跳"
     }
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#07c160",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "守护",
+        "iconPath": "images/tab_home.png",
+        "selectedIconPath": "images/tab_home_active.png"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "设置",
+        "iconPath": "images/tab_settings.png",
+        "selectedIconPath": "images/tab_settings_active.png"
+      }
+    ]
   }
 }
