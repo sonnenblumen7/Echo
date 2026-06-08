@@ -3,6 +3,7 @@ import logging
 from models.database import get_db
 from services.contacts import get_contacts
 from services.notification import send_sms_alert
+from services.push import send_push_notification
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,10 @@ def trigger_alert(latitude: float, longitude: float, timestamp: int,
             queued += 1
 
     logger.info("trigger_alert 完成 [%s]: sent=%d, queued=%d", source, sent, queued)
+
+    # PushDeer 推送（额外通道，失败不影响主流程）
+    _push_deer(source, latitude, longitude, timestamp)
+
     return {"sent": sent, "queued": queued}
 
 
@@ -136,3 +141,24 @@ def _get_phone_by_contact_id(contact_id: int) -> str:
         return row["phone"] if row else "unknown"
     finally:
         conn.close()
+
+
+def _push_deer(source: str, latitude: float, longitude: float, timestamp: int) -> None:
+    """PushDeer 推送，失败只记日志。"""
+    import datetime
+    map_link = f"https://uri.amap.com/marker?position={longitude},{latitude}"
+    time_str = datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
+    if source == "SOS_BUTTON":
+        title = "🚨 Echo SOS"
+    else:
+        title = "⚠️ Echo Watchdog Alert"
+
+    message = (
+        f"**来源**: {source}\n"
+        f"**时间**: {time_str}\n"
+        f"**坐标**: {latitude}, {longitude}\n"
+        f"**地图**: [高德导航]({map_link})"
+    )
+
+    send_push_notification(title, message)
