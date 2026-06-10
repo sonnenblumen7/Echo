@@ -299,3 +299,85 @@ f3efd1f docs: fix sync date to 0607
 1. 接入真实 SMS API（替换 mock）— 腾讯云 SMS
 2. 注册真实小程序 appid（Day 5 前）
 3. Day 6 强制提审
+
+---
+
+## 2026-06-10（公网验证 + Phase 3 启动）
+
+### 公网部署验证
+
+- 腾讯云香港服务器 101.32.68.245 部署完成
+- 心跳/SOS/PushDeer/联系人 CRUD 全部真机验证通过
+- 服务器时区修正为 Asia/Shanghai（从 UTC 改为 CST）
+- Git tag v0.1.0 标记 Phase 2 里程碑
+
+### SOS UNIQUE 约束修复
+
+- 问题：同一秒多次 SOS 触发 UNIQUE constraint failed
+- 原因：device_id='sos' + 相同 client_ts = 重复
+- 修复：client_ts 改为 server_ts * 1000 + random(0,999)，保证唯一
+
+### DEBUG_OFFLINE 测试开关
+
+- 在 index.js 顶部新增 `var DEBUG_OFFLINE = false`
+- true 时：仅模拟心跳队列发送失败，contacts/status/SOS 不受影响
+- 解决了之前改 BASE_URL 会导致所有请求失败的问题
+
+### Nginx 部署
+
+- 安装 nginx + certbot
+- 配置模板写入 /etc/nginx/sites-available/echo
+- 代理：80 → localhost:8000
+- 等域名到手后替换 YOUR_DOMAIN 并申请 SSL
+
+### 域名注册
+
+- 选择 echoping.com（Echo + 心跳 ping）
+- 腾讯云注册中，审核阶段
+- 香港服务器不需要 ICP 备案
+
+### 提审材料
+
+- 名称：Echo 防失联看门狗
+- 类目：工具 → 信息查询
+- 简介、隐私说明、截图说明已写入 docs/REVIEW_MATERIALS.md
+
+### Phase 3 启动：AI 伴侣
+
+**新增接口：POST /internal/heartbeat**
+- routers/internal.py 新建
+- 接收情感心跳（AstrBot 回调）
+- 调 reset_watchdog() 重置看门狗
+- 不写入 heartbeat_log（无坐标数据）
+- 6 项测试全部通过
+
+**AstrBot 插件：echo_watchdog**
+- 路径：e:/astrbot/data/plugins/echo_watchdog/
+- 功能：监听私聊消息 → POST /internal/heartbeat → 重置看门狗
+- 5 秒超时，失败只记日志
+- 使用 aiohttp 异步 HTTP
+
+**proactive_chat 插件**
+- 已安装，待配置
+- 计划：30 分钟沉默 → AstrBot 主动发微信关怀
+- 配合 echo_watchdog：用户回复 → 重置看门狗
+
+### Git 提交
+
+```
+aaabe7a feat: POST /internal/heartbeat for emotional heartbeat (AstrBot)
+83f440d docs: mini program review materials
+47fcf2c docs: update sync to 0610
+65470a0 feat: DEBUG_OFFLINE toggle for offline cache testing
+a7a5519 fix: SOS UNIQUE constraint
+be3fd20 docs: update sync to 0609 with deployment status
+f33334c chore: switch miniprogram to public backend endpoint
+```
+
+### 下一步
+
+1. 服务器 git pull + 重启 uvicorn
+2. 重启 AstrBot 加载 echo_watchdog 插件
+3. 配置 proactive_chat 插件 + System Prompt
+4. 端到端测试
+5. 域名到手后 Nginx SSL + 提审
