@@ -1,4 +1,5 @@
 import time
+import random
 import logging
 
 from fastapi import APIRouter
@@ -21,6 +22,8 @@ class SosRequest(BaseModel):
 @router.post("/")
 async def sos(req: SosRequest):
     server_ts = int(time.time())
+    # 用 server_ts + 随机偏移作为 client_ts，保证每次 SOS 唯一
+    sos_ts = server_ts * 1000 + random.randint(0, 999)
 
     # 1. 写入 heartbeat_log，type='sos'，留存铁证
     conn = get_db()
@@ -29,7 +32,7 @@ async def sos(req: SosRequest):
             "INSERT INTO heartbeat_log "
             "(device_id, latitude, longitude, client_ts, server_ts, type) "
             "VALUES (?, ?, ?, ?, ?, 'sos')",
-            ("sos", req.latitude, req.longitude, req.client_ts, server_ts),
+            ("sos", req.latitude, req.longitude, sos_ts, server_ts),
         )
         conn.commit()
     except Exception as e:
