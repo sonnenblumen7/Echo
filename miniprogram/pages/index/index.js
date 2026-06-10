@@ -3,6 +3,7 @@ var countdownTimer = null
 var deviceId = 'test_device_01'
 var config = require('../../config')
 var BASE_URL = config.BASE_URL
+var DEBUG_OFFLINE = false  // true = 模拟断网，仅影响心跳队列发送
 
 function getQueue() {
   return wx.getStorageSync('heartbeat_queue') || []
@@ -15,6 +16,11 @@ function saveQueue(queue) {
 function flushQueue(ctx) {
   var queue = getQueue()
   if (queue.length === 0) return
+
+  if (DEBUG_OFFLINE) {
+    console.log('DEBUG_OFFLINE: 模拟网络失败，保留队列 (%d 条)', queue.length)
+    return
+  }
 
   console.log('flushQueue: 发送 %d 条心跳', queue.length)
 
