@@ -42,8 +42,8 @@ def trigger_alert(wx_openid: str, latitude: float, longitude: float, timestamp: 
     # PushDeer 推送（额外通道，失败不影响主流程）
     _push_deer(source, latitude, longitude, timestamp)
 
-    # 邮件告警（仅 critical 状态，且只发一次）
-    if source == "WATCHDOG_TIMEOUT" and not is_email_sent():
+    # 邮件告警（SOS 和 Watchdog 都发送，避免重复）
+    if not is_email_sent():
         _send_email_alerts(wx_openid, latitude, longitude, timestamp)
 
     return {"sent": sent, "queued": queued}
