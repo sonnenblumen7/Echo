@@ -1,0 +1,4 @@
+name: echo_watchdog
+version: 1.0.0
+description: Echo 防失联看门狗情感心跳插件
+author: Leo
