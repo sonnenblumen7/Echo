@@ -42,6 +42,12 @@ page {
   color: #333;
 }
 
+.contact-email {
+  font-size: 26rpx;
+  color: #5856d6;
+  margin-top: 6rpx;
+}
+
 .contact-name {
   font-size: 24rpx;
   color: #999;

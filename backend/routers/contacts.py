@@ -1,8 +1,9 @@
 import re
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel, model_validator
+from typing import Optional
 
 from services.contacts import add_contact, get_contacts, delete_contact
 from services.notification import send_test_sms
@@ -34,8 +35,11 @@ class ContactRequest(BaseModel):
 
 
 @router.post("/contacts")
-async def create_contact(req: ContactRequest):
-    contact, duplicate = add_contact(req.phone, req.name, req.email)
+async def create_contact(req: ContactRequest, x_wx_openid: Optional[str] = Header(None)):
+    if not x_wx_openid:
+        raise HTTPException(status_code=401, detail="缺少用户标识")
+
+    contact, duplicate = add_contact(x_wx_openid, req.phone, req.name, req.email)
     if duplicate:
         raise HTTPException(status_code=409, detail="该手机号或邮箱已存在")
 
@@ -52,12 +56,18 @@ async def create_contact(req: ContactRequest):
 
 
 @router.get("/contacts")
-async def list_contacts():
-    return {"status": "ok", "contacts": get_contacts()}
+async def list_contacts(x_wx_openid: Optional[str] = Header(None)):
+    if not x_wx_openid:
+        raise HTTPException(status_code=401, detail="缺少用户标识")
+
+    return {"status": "ok", "contacts": get_contacts(x_wx_openid)}
 
 
 @router.delete("/contacts/{contact_id}")
-async def remove_contact(contact_id: int):
-    if not delete_contact(contact_id):
+async def remove_contact(contact_id: int, x_wx_openid: Optional[str] = Header(None)):
+    if not x_wx_openid:
+        raise HTTPException(status_code=401, detail="缺少用户标识")
+
+    if not delete_contact(contact_id, x_wx_openid):
         raise HTTPException(status_code=404, detail="联系人不存在")
     return {"status": "ok", "msg": "deleted"}

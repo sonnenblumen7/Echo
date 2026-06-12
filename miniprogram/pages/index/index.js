@@ -5,6 +5,10 @@ var config = require('../../config')
 var BASE_URL = config.BASE_URL
 var DEBUG_OFFLINE = false  // true = 模拟断网，仅影响心跳队列发送
 
+function getOpenid() {
+  return getApp().globalData.openid || wx.getStorageSync('openid') || ''
+}
+
 function getQueue() {
   return wx.getStorageSync('heartbeat_queue') || []
 }
@@ -51,7 +55,8 @@ function tick(ctx) {
         latitude: res.latitude,
         longitude: res.longitude,
         client_ts: now,
-        type: 'physical'
+        type: 'physical',
+        wx_openid: getOpenid()
       }
 
       var queue = getQueue()
@@ -219,6 +224,9 @@ Page({
     wx.request({
       url: BASE_URL + '/contacts',
       method: 'GET',
+      header: {
+        'X-WX-OPENID': getOpenid()
+      },
       success: function (r) {
         if (r.data && r.data.contacts && r.data.contacts.length > 0) {
           ctx._doStart()
@@ -323,7 +331,8 @@ Page({
           data: {
             latitude: res.latitude,
             longitude: res.longitude,
-            client_ts: ts
+            client_ts: ts,
+            wx_openid: getOpenid()
           },
           success: function (r) {
             console.log('SOS 发送成功:', r.data)

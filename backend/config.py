@@ -19,3 +19,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.qq.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+
+# 微信小程序配置
+WX_APPID = os.getenv("WX_APPID", "")
+WX_SECRET = os.getenv("WX_SECRET", "")

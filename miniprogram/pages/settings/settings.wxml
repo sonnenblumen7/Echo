@@ -6,6 +6,7 @@
     <view class="contact-item" wx:for="{{contacts}}" wx:key="id">
       <view class="contact-info">
         <text class="contact-phone">📱 {{item.phone}}</text>
+        <text class="contact-email" wx:if="{{item.email}}">📧 {{item.email}}</text>
         <text class="contact-name" wx:if="{{item.name}}">{{item.name}}</text>
       </view>
       <text class="contact-delete" bindtap="deleteContact" data-id="{{item.id}}">✕</text>
@@ -21,7 +22,7 @@
     <view class="form-title">添加联系人</view>
     <input
       class="input"
-      placeholder="手机号（必填）"
+      placeholder="手机号（可选）"
       type="number"
       maxlength="11"
       value="{{phone}}"
@@ -29,10 +30,17 @@
     />
     <input
       class="input"
+      placeholder="邮箱（可选）"
+      type="text"
+      value="{{email}}"
+      bindinput="onEmailInput"
+    />
+    <input
+      class="input"
       placeholder="姓名（可选）"
       value="{{name}}"
       bindinput="onNameInput"
     />
-    <button class="btn-save" bindtap="saveContact">保存并测试</button>
+    <button class="btn-save" bindtap="saveContact">保存</button>
   </view>
 </view>

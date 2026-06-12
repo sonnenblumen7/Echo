@@ -19,6 +19,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS heartbeat_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            wx_openid TEXT NOT NULL DEFAULT '',
             device_id TEXT NOT NULL,
             latitude REAL,
             longitude REAL,
@@ -26,6 +27,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
             server_ts INTEGER NOT NULL,
             type TEXT NOT NULL DEFAULT 'physical'
         );
+
+        CREATE INDEX IF NOT EXISTS idx_heartbeat_openid ON heartbeat_log(wx_openid);
 
         CREATE TABLE IF NOT EXISTS watchdog_state (
             id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -42,11 +45,14 @@ def create_tables(conn: sqlite3.Connection) -> None:
 
         CREATE TABLE IF NOT EXISTS contacts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            wx_openid TEXT NOT NULL DEFAULT '',
             phone TEXT NOT NULL,
             name TEXT,
             email TEXT DEFAULT '',
             created_at INTEGER NOT NULL
         );
+
+        CREATE INDEX IF NOT EXISTS idx_contacts_openid ON contacts(wx_openid);
 
         CREATE TABLE IF NOT EXISTS alert_queue (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
