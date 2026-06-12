@@ -2,8 +2,9 @@ import time
 import random
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from pydantic import BaseModel
+from typing import Optional
 
 from models.database import get_db
 from services.watchdog import transition_state
@@ -17,10 +18,16 @@ class SosRequest(BaseModel):
     latitude: float
     longitude: float
     client_ts: int
+    wx_openid: str = ""
 
 
 @router.post("/")
-async def sos(req: SosRequest):
+async def sos(req: SosRequest, x_wx_openid: Optional[str] = Header(None)):
+    # 优先使用 Header 中的 openid，否则使用 body 中的
+    openid = x_wx_openid or req.wx_openid
+    if not openid:
+        return {"status": "error", "msg": "缺少用户标识"}
+
     server_ts = int(time.time())
     # 用 server_ts + 随机偏移作为 client_ts，保证每次 SOS 唯一
     sos_ts = server_ts * 1000 + random.randint(0, 999)
@@ -30,9 +37,9 @@ async def sos(req: SosRequest):
     try:
         conn.execute(
             "INSERT INTO heartbeat_log "
-            "(device_id, latitude, longitude, client_ts, server_ts, type) "
-            "VALUES (?, ?, ?, ?, ?, 'sos')",
-            ("sos", req.latitude, req.longitude, sos_ts, server_ts),
+            "(wx_openid, device_id, latitude, longitude, client_ts, server_ts, type) "
+            "VALUES (?, ?, ?, ?, ?, ?, 'sos')",
+            (openid, "sos", req.latitude, req.longitude, sos_ts, server_ts),
         )
         conn.commit()
     except Exception as e:
@@ -44,8 +51,9 @@ async def sos(req: SosRequest):
     # 2. 强制切入告警态，防状态脑裂
     transition_state("alert")
 
-    # 3. 立即触发告警
-    result = trigger_alert(req.latitude, req.longitude, server_ts, source="SOS_BUTTON")
+    # 3. 立即触发告警（传递 openid）
+    result = trigger_alert(openid, req.latitude, req.longitude, server_ts, source="SOS_BUTTON")
 
-    logger.warning("SOS 触发: lat=%f, lng=%f, result=%s", req.latitude, req.longitude, result)
+    logger.warning("SOS 触发: openid=%s, lat=%f, lng=%f, result=%s",
+                   openid[:8] + "****", req.latitude, req.longitude, result)
     return {"status": "alert_triggered", "reason": "sos"}

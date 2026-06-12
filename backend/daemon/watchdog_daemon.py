@@ -67,8 +67,22 @@ def _on_warning() -> None:
 
 def _on_alert() -> None:
     """告警触发：获取最后坐标，通知所有紧急联系人。"""
+    # 获取最后一条心跳的 openid
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT wx_openid FROM heartbeat_log WHERE type = 'physical' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row or not row["wx_openid"]:
+        logger.warning("无心跳记录或无 openid，跳过告警")
+        return
+
+    wx_openid = row["wx_openid"]
     loc = get_last_location()
     lat = loc.get("latitude", 0.0)
     lng = loc.get("longitude", 0.0)
     ts = loc.get("client_ts", int(time.time()))
-    trigger_alert(lat, lng, ts, source="WATCHDOG_TIMEOUT")
+    trigger_alert(wx_openid, lat, lng, ts, source="WATCHDOG_TIMEOUT")

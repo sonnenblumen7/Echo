@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 MAX_RETRY = 5
 
 
-def trigger_alert(latitude: float, longitude: float, timestamp: int,
+def trigger_alert(wx_openid: str, latitude: float, longitude: float, timestamp: int,
                   source: str = "WATCHDOG_TIMEOUT") -> dict:
     """触发告警：遍历联系人发送 SMS，失败则写入 alert_queue。
 
     source: "SOS_BUTTON" | "WATCHDOG_TIMEOUT"
     """
-    contacts = get_contacts()
+    contacts = get_contacts(wx_openid)
     if not contacts:
         logger.warning("trigger_alert: 无紧急联系人，跳过")
         return {"sent": 0, "queued": 0, "reason": "no contacts"}
@@ -44,14 +44,14 @@ def trigger_alert(latitude: float, longitude: float, timestamp: int,
 
     # 邮件告警（仅 critical 状态，且只发一次）
     if source == "WATCHDOG_TIMEOUT" and not is_email_sent():
-        _send_email_alerts(latitude, longitude, timestamp)
+        _send_email_alerts(wx_openid, latitude, longitude, timestamp)
 
     return {"sent": sent, "queued": queued}
 
 
-def _send_email_alerts(latitude: float, longitude: float, timestamp: int) -> None:
+def _send_email_alerts(wx_openid: str, latitude: float, longitude: float, timestamp: int) -> None:
     """发送邮件告警给所有有邮箱的联系人。"""
-    contacts = get_contacts_with_email()
+    contacts = get_contacts_with_email(wx_openid)
     if not contacts:
         logger.info("无邮箱联系人，跳过邮件告警")
         return
