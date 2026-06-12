@@ -71,6 +71,36 @@ page {
   color: #999;
 }
 
+.value.sleep {
+  color: #5856d6;
+}
+
+.sleep-remaining {
+  color: #5856d6;
+  font-weight: bold;
+}
+
+.btn-sleep {
+  width: 80%;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  color: #5856d6;
+  background: #fff;
+  border: 2rpx solid #5856d6;
+  margin-bottom: 40rpx;
+}
+
+.btn-sleep::after {
+  border: none;
+}
+
+.btn-cancel-sleep {
+  color: #ff9500;
+  border-color: #ff9500;
+}
+
 .btn-main {
   width: 80%;
   height: 96rpx;

@@ -113,9 +113,105 @@ tail -f echo.log
 pkill -f uvicorn
 ```
 
+## 9. 域名 HTTPS 配置（生产环境）
+
+### 9.1 安装 Nginx + Certbot
+
+```bash
+# 安装 Nginx
+sudo apt install -y nginx
+
+# 安装 Certbot（Let's Encrypt）
+sudo apt install -y certbot python3-certbot-nginx
+```
+
+### 9.2 申请 SSL 证书
+
+```bash
+# 确保域名 DNS 已解析到服务器 IP
+# echoping.cn → 101.32.68.245
+
+# 申请证书（Certbot 自动配置 Nginx）
+sudo certbot --nginx -d echoping.cn
+```
+
+### 9.3 Nginx 配置模板
+
+创建 `/etc/nginx/sites-available/echo`：
+
+```nginx
+server {
+    listen 80;
+    server_name echoping.cn;
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name echoping.cn;
+    ssl_certificate /etc/letsencrypt/live/echoping.cn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/echoping.cn/privkey.pem;
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### 9.4 启用配置
+
+```bash
+# 创建软链接
+sudo ln -sf /etc/nginx/sites-available/echo /etc/nginx/sites-enabled/echo
+
+# 测试配置
+sudo nginx -t
+
+# 重载 Nginx
+sudo systemctl reload nginx
+```
+
+### 9.5 验证 HTTPS
+
+```bash
+# 测试健康检查
+curl https://echoping.cn/health
+
+# 测试所有接口
+curl https://echoping.cn/status
+curl https://echoping.cn/contacts
+curl -I https://echoping.cn/docs
+```
+
+### 9.6 小程序配置切换
+
+修改 `miniprogram/config.js`：
+
+```javascript
+module.exports = {
+  BASE_URL: "https://echoping.cn"
+};
+```
+
+微信开发者工具重新编译，真机测试。
+
+### 9.7 微信后台域名配置
+
+1. 登录 https://mp.weixin.qq.com
+2. 开发 → 开发管理 → 开发设置
+3. 服务器域名 → request合法域名
+4. 配置：`https://echoping.cn`
+5. 保存
+
 ## 注意事项
 
 - 公网 IP 需要在云服务器安全组/防火墙中开放 8000 端口
 - `.env` 文件不要提交到 Git（已在 .gitignore 中）
 - SQLite 数据库文件 `echo.db` 自动生成在 backend/ 目录下
 - uvicorn 前台运行时关闭终端会停止服务，建议用 nohup 或 systemd 托管
+- Let's Encrypt 证书有效期 90 天，Certbot 会自动续期

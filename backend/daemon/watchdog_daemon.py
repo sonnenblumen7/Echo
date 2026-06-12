@@ -6,6 +6,7 @@ from services.watchdog import get_watchdog_state, get_last_location, transition_
 from services.config import get_config
 from services.alert import trigger_alert, process_alert_queue
 from services.notification import send_direct_warning
+from routers.sleep import get_sleep_until
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,15 @@ async def watchdog_loop() -> None:
 
 def _check_once() -> None:
     """单次检查逻辑。拆出便于测试。"""
+    # 检查睡眠模式
+    sleep_until = get_sleep_until()
+    if sleep_until > 0:
+        now_ts = int(time.time())
+        if now_ts < sleep_until:
+            remaining = sleep_until - now_ts
+            logger.debug("睡眠模式中，剩余 %d 秒", remaining)
+            return
+
     state = get_watchdog_state()
     config = get_config()
 

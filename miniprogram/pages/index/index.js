@@ -97,15 +97,119 @@ Page({
     state: '未知',
     lastHeartbeat: '--:--:--',
     countdown: 60,
-    sosPressing: false
+    sosPressing: false,
+    sleepEnabled: false,
+    sleepUntil: 0,
+    sleepRemaining: ''
+  },
+
+  onShow: function () {
+    this.checkSleepStatus()
   },
 
   toggleProtection: function () {
+    if (this.data.sleepEnabled) {
+      wx.showToast({ title: '睡眠模式中，请先取消', icon: 'none' })
+      return
+    }
     if (this.data.protecting) {
       this.stopProtection()
     } else {
       this.startProtection()
     }
+  },
+
+  startSleep: function () {
+    var ctx = this
+    wx.showModal({
+      title: '暂停守护',
+      content: '将暂停看门狗 8 小时，睡眠期间不触发告警。确认？',
+      success: function (res) {
+        if (!res.confirm) return
+        wx.request({
+          url: BASE_URL + '/sleep',
+          method: 'POST',
+          header: { 'Content-Type': 'application/json' },
+          data: { hours: 8 },
+          success: function (r) {
+            if (r.data && r.data.status === 'ok') {
+              console.log('睡眠模式已启用:', r.data.sleep_until)
+              ctx.checkSleepStatus()
+              wx.showToast({ title: '已暂停 8 小时', icon: 'success' })
+            }
+          },
+          fail: function () {
+            wx.showToast({ title: '设置失败', icon: 'error' })
+          }
+        })
+      }
+    })
+  },
+
+  cancelSleep: function () {
+    var ctx = this
+    wx.showModal({
+      title: '取消睡眠',
+      content: '立即恢复看门狗守护？',
+      success: function (res) {
+        if (!res.confirm) return
+        wx.request({
+          url: BASE_URL + '/sleep',
+          method: 'DELETE',
+          success: function (r) {
+            if (r.data && r.data.status === 'ok') {
+              console.log('睡眠模式已取消')
+              ctx.setData({ sleepEnabled: false, sleepUntil: 0, sleepRemaining: '' })
+              wx.showToast({ title: '已恢复守护', icon: 'success' })
+            }
+          },
+          fail: function () {
+            wx.showToast({ title: '取消失败', icon: 'error' })
+          }
+        })
+      }
+    })
+  },
+
+  checkSleepStatus: function () {
+    var ctx = this
+    wx.request({
+      url: BASE_URL + '/sleep',
+      method: 'GET',
+      success: function (r) {
+        if (r.data) {
+          var enabled = r.data.enabled
+          var sleepUntil = r.data.sleep_until || 0
+          ctx.setData({ sleepEnabled: enabled, sleepUntil: sleepUntil })
+          if (enabled && sleepUntil > 0) {
+            ctx.updateSleepRemaining()
+          } else {
+            ctx.setData({ sleepRemaining: '' })
+          }
+        }
+      },
+      fail: function () {}
+    })
+  },
+
+  updateSleepRemaining: function () {
+    var ctx = this
+    if (!ctx.data.sleepEnabled) return
+
+    var now = Math.floor(Date.now() / 1000)
+    var remaining = ctx.data.sleepUntil - now
+    if (remaining <= 0) {
+      ctx.setData({ sleepEnabled: false, sleepUntil: 0, sleepRemaining: '' })
+      return
+    }
+
+    var hours = Math.floor(remaining / 3600)
+    var minutes = Math.floor((remaining % 3600) / 60)
+    ctx.setData({ sleepRemaining: hours + '小时' + minutes + '分钟' })
+
+    setTimeout(function () {
+      ctx.updateSleepRemaining()
+    }, 60000)
   },
 
   startProtection: function () {

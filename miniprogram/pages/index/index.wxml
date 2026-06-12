@@ -9,9 +9,13 @@
   <view class="card">
     <view class="status-row">
       <text class="label">守护状态</text>
-      <text class="value {{protecting ? 'active' : 'inactive'}}">
-        {{protecting ? '守护中' : '未开启'}}
+      <text class="value {{protecting ? 'active' : (sleepEnabled ? 'sleep' : 'inactive')}}">
+        {{sleepEnabled ? '睡眠中' : (protecting ? '守护中' : '未开启')}}
       </text>
+    </view>
+    <view class="status-row" wx:if="{{sleepEnabled}}">
+      <text class="label">剩余时间</text>
+      <text class="value sleep-remaining">{{sleepRemaining}}</text>
     </view>
     <view class="status-row">
       <text class="label">最后心跳</text>
@@ -27,8 +31,17 @@
   <button
     class="btn-main {{protecting ? 'btn-stop' : 'btn-start'}}"
     bindtap="toggleProtection"
+    disabled="{{sleepEnabled}}"
   >
     {{protecting ? '结束守护' : '开启守护'}}
+  </button>
+
+  <!-- 睡眠模式按钮 -->
+  <button
+    class="btn-sleep {{sleepEnabled ? 'btn-cancel-sleep' : ''}}"
+    bindtap="{{sleepEnabled ? 'cancelSleep' : 'startSleep'}}"
+  >
+    {{sleepEnabled ? '取消睡眠' : '暂停8小时'}}
   </button>
 
   <!-- 手动心跳 -->
