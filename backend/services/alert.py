@@ -1,9 +1,11 @@
 import time
 import logging
 from models.database import get_db
-from services.contacts import get_contacts
+from services.contacts import get_contacts, get_contacts_with_email
 from services.notification import send_sms_alert
 from services.push import send_push_notification
+from services.email_sender import send_alert_email
+from services.watchdog import is_email_sent, mark_email_sent
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +28,44 @@ def trigger_alert(latitude: float, longitude: float, timestamp: int,
     queued = 0
 
     for contact in contacts:
-        result = send_sms_alert(contact["phone"], message)
-        if result.get("sent"):
-            sent += 1
-        else:
-            _queue_alert(contact["id"], contact["phone"], message)
-            queued += 1
+        # 短信发送（如果有手机号）
+        if contact.get("phone"):
+            result = send_sms_alert(contact["phone"], message)
+            if result.get("sent"):
+                sent += 1
+            else:
+                _queue_alert(contact["id"], contact["phone"], message)
+                queued += 1
 
     logger.info("trigger_alert 完成 [%s]: sent=%d, queued=%d", source, sent, queued)
 
     # PushDeer 推送（额外通道，失败不影响主流程）
     _push_deer(source, latitude, longitude, timestamp)
 
+    # 邮件告警（仅 critical 状态，且只发一次）
+    if source == "WATCHDOG_TIMEOUT" and not is_email_sent():
+        _send_email_alerts(latitude, longitude, timestamp)
+
     return {"sent": sent, "queued": queued}
+
+
+def _send_email_alerts(latitude: float, longitude: float, timestamp: int) -> None:
+    """发送邮件告警给所有有邮箱的联系人。"""
+    contacts = get_contacts_with_email()
+    if not contacts:
+        logger.info("无邮箱联系人，跳过邮件告警")
+        return
+
+    email_sent_count = 0
+    for contact in contacts:
+        if send_alert_email(contact["email"], latitude, longitude, timestamp):
+            email_sent_count += 1
+
+    if email_sent_count > 0:
+        mark_email_sent()
+        logger.info("邮件告警已发送给 %d 位联系人", email_sent_count)
+    else:
+        logger.warning("邮件告警发送失败")
 
 
 def process_alert_queue() -> dict:

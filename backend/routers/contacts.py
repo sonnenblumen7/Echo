@@ -12,23 +12,38 @@ router = APIRouter()
 
 
 class ContactRequest(BaseModel):
-    phone: str
+    phone: str = ""
     name: str = None
+    email: str = ""
 
     @model_validator(mode="after")
-    def validate_phone(self):
-        if not re.match(r"^1[3-9]\d{9}$", self.phone):
+    def validate_contact(self):
+        # 手机号和邮箱至少填一个
+        if not self.phone and not self.email:
+            raise ValueError("手机号和邮箱至少填写一项")
+
+        # 验证手机号格式（如果填写了）
+        if self.phone and not re.match(r"^1[3-9]\d{9}$", self.phone):
             raise ValueError("手机号格式错误：需为 11 位中国大陆手机号")
+
+        # 验证邮箱格式（如果填写了）
+        if self.email and not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", self.email):
+            raise ValueError("邮箱格式错误")
+
         return self
 
 
 @router.post("/contacts")
 async def create_contact(req: ContactRequest):
-    contact, duplicate = add_contact(req.phone, req.name)
+    contact, duplicate = add_contact(req.phone, req.name, req.email)
     if duplicate:
-        raise HTTPException(status_code=409, detail="该手机号已存在")
+        raise HTTPException(status_code=409, detail="该手机号或邮箱已存在")
 
-    sms_result = send_test_sms(req.phone)
+    # 如果有手机号，发送测试短信
+    sms_result = None
+    if req.phone:
+        sms_result = send_test_sms(req.phone)
+
     return {
         "status": "ok",
         "contact": contact,

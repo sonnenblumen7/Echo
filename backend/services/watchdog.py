@@ -40,7 +40,7 @@ def get_remaining() -> int:
 
 
 def reset_watchdog() -> None:
-    """重置看门狗：更新 last_heartbeat_ts，state 复位为 normal。
+    """重置看门狗：更新 last_heartbeat_ts，state 复位为 normal，重置 email_sent。
 
     异常向上传播，由调用方决定如何处理。
     """
@@ -49,7 +49,7 @@ def reset_watchdog() -> None:
     try:
         conn.execute(
             "UPDATE watchdog_state "
-            "SET last_heartbeat_ts = ?, state = 'normal', last_state_change_ts = NULL "
+            "SET last_heartbeat_ts = ?, state = 'normal', last_state_change_ts = NULL, email_sent = 0 "
             "WHERE id = 1",
             (now_ts,),
         )
@@ -86,5 +86,31 @@ def transition_state(new_state: str) -> None:
         conn.commit()
     except Exception as e:
         logger.error("transition_state 失败: %s", e)
+    finally:
+        conn.close()
+
+
+def is_email_sent() -> bool:
+    """检查本次告警是否已发送过邮件。"""
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT email_sent FROM watchdog_state WHERE id = 1"
+        ).fetchone()
+        return bool(row["email_sent"]) if row else False
+    finally:
+        conn.close()
+
+
+def mark_email_sent() -> None:
+    """标记邮件已发送。"""
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE watchdog_state SET email_sent = 1 WHERE id = 1"
+        )
+        conn.commit()
+    except Exception as e:
+        logger.error("mark_email_sent 失败: %s", e)
     finally:
         conn.close()

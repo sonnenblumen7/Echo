@@ -31,7 +31,8 @@ def create_tables(conn: sqlite3.Connection) -> None:
             id INTEGER PRIMARY KEY CHECK (id = 1),
             state TEXT NOT NULL DEFAULT 'normal',
             last_heartbeat_ts INTEGER,
-            last_state_change_ts INTEGER
+            last_state_change_ts INTEGER,
+            email_sent INTEGER NOT NULL DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS watchdog_config (
@@ -43,6 +44,7 @@ def create_tables(conn: sqlite3.Connection) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             phone TEXT NOT NULL,
             name TEXT,
+            email TEXT DEFAULT '',
             created_at INTEGER NOT NULL
         );
 

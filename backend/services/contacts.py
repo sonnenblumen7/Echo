@@ -5,23 +5,33 @@ from models.database import get_db
 logger = logging.getLogger(__name__)
 
 
-def add_contact(phone: str, name: str = None) -> tuple:
+def add_contact(phone: str = "", name: str = None, email: str = "") -> tuple:
     """添加联系人。返回 (contact_dict, duplicate_bool)。"""
     conn = get_db()
     try:
-        existing = conn.execute(
-            "SELECT id FROM contacts WHERE phone = ?", (phone,)
-        ).fetchone()
-        if existing:
-            return None, True
+        # 检查手机号重复（如果有手机号）
+        if phone:
+            existing = conn.execute(
+                "SELECT id FROM contacts WHERE phone = ?", (phone,)
+            ).fetchone()
+            if existing:
+                return None, True
+
+        # 检查邮箱重复（如果有邮箱）
+        if email:
+            existing = conn.execute(
+                "SELECT id FROM contacts WHERE email = ?", (email,)
+            ).fetchone()
+            if existing:
+                return None, True
 
         now = int(time.time())
         cursor = conn.execute(
-            "INSERT INTO contacts (phone, name, created_at) VALUES (?, ?, ?)",
-            (phone, name, now),
+            "INSERT INTO contacts (phone, name, email, created_at) VALUES (?, ?, ?, ?)",
+            (phone, name, email, now),
         )
         conn.commit()
-        return {"id": cursor.lastrowid, "phone": phone, "name": name, "created_at": now}, False
+        return {"id": cursor.lastrowid, "phone": phone, "name": name, "email": email, "created_at": now}, False
     finally:
         conn.close()
 
@@ -31,7 +41,19 @@ def get_contacts() -> list:
     conn = get_db()
     try:
         rows = conn.execute(
-            "SELECT id, phone, name, created_at FROM contacts ORDER BY id"
+            "SELECT id, phone, name, email, created_at FROM contacts ORDER BY id"
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def get_contacts_with_email() -> list:
+    """查询有邮箱的联系人。"""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT id, phone, name, email, created_at FROM contacts WHERE email != '' ORDER BY id"
         ).fetchall()
         return [dict(row) for row in rows]
     finally:
