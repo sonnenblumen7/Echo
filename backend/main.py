@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from models.database import init_db
 from daemon.watchdog_daemon import watchdog_loop
 
-from routers import heartbeat, status, config, contacts, sos, internal, sleep, auth
+from routers import heartbeat, status, config, contacts, sos, internal, sleep, auth, bind
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ app.include_router(sos.router)
 app.include_router(internal.router)
 app.include_router(sleep.router)
 app.include_router(auth.router)
+app.include_router(bind.router)
 
 
 @app.get("/health")

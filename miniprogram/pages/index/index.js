@@ -80,8 +80,15 @@ function fetchStatus(ctx) {
     url: BASE_URL + '/status',
     method: 'GET',
     success: function (r) {
-      if (r.data && r.data.state) {
-        ctx.setData({ state: r.data.state })
+      if (r.data) {
+        var data = r.data
+        ctx.setData({ state: data.state || '未知' })
+
+        // 更新最后心跳时间（从服务器获取）
+        if (data.last_heartbeat_ts) {
+          var timeStr = formatTime(data.last_heartbeat_ts)
+          ctx.setData({ lastHeartbeat: timeStr })
+        }
       }
     },
     fail: function () {}
@@ -110,6 +117,22 @@ Page({
 
   onShow: function () {
     this.checkSleepStatus()
+    this.checkFirstLaunch()
+  },
+
+  checkFirstLaunch: function () {
+    var hasLaunched = wx.getStorageSync('hasLaunched')
+    if (!hasLaunched) {
+      wx.showModal({
+        title: '欢迎使用 Echo',
+        content: 'Echo 是你的防失联看门狗。\n\n使用步骤：\n1. 先在「设置」页添加紧急联系人\n2. 回到「守护」页开启守护\n3. 遇到紧急情况长按 SOS 按钮\n\n与 AI 聊天也能自动续命哦！',
+        showCancel: false,
+        confirmText: '我知道了',
+        success: function () {
+          wx.setStorageSync('hasLaunched', true)
+        }
+      })
+    }
   },
 
   toggleProtection: function () {
@@ -261,6 +284,11 @@ Page({
       tick(ctx)
     }, 60000)
 
+    // 每 30 秒查询一次状态（同步最后心跳时间）
+    ctx.statusTimer = setInterval(function () {
+      fetchStatus(ctx)
+    }, 30000)
+
     countdownTimer = setInterval(function () {
       var c = ctx.data.countdown
       if (c > 0) {
@@ -276,6 +304,13 @@ Page({
     timer = null
     clearInterval(countdownTimer)
     countdownTimer = null
+
+    // 清除状态轮询定时器
+    if (this.statusTimer) {
+      clearInterval(this.statusTimer)
+      this.statusTimer = null
+    }
+
     console.log('stopProtection: 守护已停止')
     wx.setStorageSync('protecting', false)
     this.setData({ protecting: false, countdown: 60 })

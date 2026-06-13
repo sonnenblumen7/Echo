@@ -64,6 +64,15 @@ def create_tables(conn: sqlite3.Connection) -> None:
             created_at INTEGER NOT NULL,
             FOREIGN KEY (contact_id) REFERENCES contacts(id)
         );
+
+        CREATE TABLE IF NOT EXISTS openid_bind (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            astrbot_openid TEXT NOT NULL UNIQUE,
+            miniprogram_openid TEXT NOT NULL,
+            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_openid_bind_astrbot ON openid_bind(astrbot_openid);
     """)
 
 
