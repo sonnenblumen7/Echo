@@ -3,6 +3,7 @@ import httpx
 from astrbot.api import logger
 from astrbot.api.star import Star, Context
 from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.api.message_components import Plain, MessageChain
 
 class EchoWatchdog(Star):
     """Echo 防失联看门狗情感心跳插件"""
@@ -27,13 +28,13 @@ class EchoWatchdog(Star):
             # 检查是否是绑定命令
             if message.startswith("绑定"):
                 await self._handle_bind_command(event, openid, message)
-                return
+                return  # 拦截消息，不传递给 AI
 
             # 检查是否是 SOS 关键词
             if self._is_sos_keyword(message):
                 logger.info("检测到 SOS 关键词，触发 SOS 告警")
                 await self._trigger_sos(event, openid)
-                return
+                return  # 拦截消息，不传递给 AI
 
             # 正常情感心跳
             async with httpx.AsyncClient() as client:
@@ -116,7 +117,6 @@ class EchoWatchdog(Star):
         """发送消息给用户"""
         try:
             # 使用 AstrBot 的消息发送机制
-            from astrbot.api.message_components import Plain
             event.set_result(MessageChain([Plain(message)]))
         except Exception as e:
             logger.error("发送消息异常: %s", e)
